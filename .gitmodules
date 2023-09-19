@@ -1,0 +1,3 @@
+[submodule "src/thirdparty/log.c"]
+	path = src/thirdparty/log.c
+	url = https://github.com/rxi/log.c.git
