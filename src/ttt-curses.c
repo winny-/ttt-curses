@@ -1,14 +1,19 @@
 #include <unistd.h>
 #include <err.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
 #include <locale.h>
 #include <curses.h>
+#include <limits.h>
+#include <stdlib.h>
 
 #include "log.h"
 #include "game.h"
+
+#define LOG_PATH "LOG"
 
 ttt_game *game;
 char last_action;
@@ -47,6 +52,19 @@ int main(int argc, char **argv) {
 	int v;
 	setlocale(LC_ALL, "");
 	srand(time(0));
+	log_set_quiet(true);
+	FILE* logfp = fopen("LOG", "a+");
+	if (logfp) {
+		log_add_fp(logfp, 2);
+		char* rp = realpath(LOG_PATH, NULL);
+		log_info("Logging to \"%s\"", rp ? rp : LOG_PATH);
+		if (rp) {
+			free(rp);
+		}
+	} else {
+		errx(errno, "Could not open log file");
+	}
+	
 	initscr();
 	start_color();
 	use_default_colors();
@@ -57,6 +75,7 @@ int main(int argc, char **argv) {
 	intrflush(stdscr, TRUE); // Prevent interrupt from messing up terminal.
 	keypad(stdscr, TRUE); // Parse key sequences for us.
 
+	log_info("Init completed.  Ncurses reports terminal dimensions of %dx%d (COLSxLINES)", COLS, LINES);
 
 	for (;;) {
 		draw();
@@ -78,6 +97,10 @@ cleanup:
 	if ((v = endwin()) != OK) {
 		errors++;
 		warnx("Call to endwin() failed with value %d\n", v);
+	}
+	if (logfp) {
+		fclose(logfp);
+		logfp = NULL;
 	}
 	ttt_game_free(game);
 	return errors;
