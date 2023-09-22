@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#define TTT_DEFAULT_LOG_LEVEL LOG_TRACE
+
 #define TTT_DEFAULT_ROWS 3
 #define TTT_DEFAULT_COLUMNS 3
 
@@ -27,6 +29,12 @@ typedef struct {
 	size_t rows, columns;
 } ttt_game;
 
+typedef struct {
+	ttt_cell winner;
+	// The following fields contain valid data when ttt_cell != TTT_EMPTY.
+	size_t start_row, start_column, end_row, end_column;
+} ttt_score;
+
 ttt_game* ttt_game_alloc(size_t, size_t);
 void ttt_game_free(ttt_game*);
 
@@ -40,5 +48,8 @@ void ttt_reset(ttt_game*);
 char* ttt_state2str(ttt_state);
 
 bool ttt_valid_move(ttt_game*, size_t, size_t);
+bool ttt_play(ttt_game*, size_t, size_t);
+ttt_score ttt_game_score(ttt_game*);
+bool ttt_can_play(ttt_game*);
 
 #endif

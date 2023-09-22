@@ -13,10 +13,13 @@
 #include "log.h"
 #include "game.h"
 
+#define MAX(x,y) (x > y ? x : y)
+#define MIN(x,y) (x < y ? x : y)
 #define LOG_PATH "LOG"
 
 ttt_game *game;
-char last_action;
+int last_action;
+size_t focus_row, focus_column;
 
 void draw() {
 	clear();
@@ -44,7 +47,8 @@ void draw() {
 			    );
 		}
 	}
-
+	mvaddch(MARGIN + focus_row*CELL_SIZE + focus_row + CELL_PADDING, MARGIN + focus_column*CELL_SIZE + focus_column + CELL_PADDING - 1, '[');
+	mvaddch(MARGIN + focus_row*CELL_SIZE + focus_row + CELL_PADDING, MARGIN + focus_column*CELL_SIZE + focus_column + CELL_PADDING + 1, ']');
 	if (last_action == 'r') {
 		mvaddstr(LINES-2, 0, "(Randomized.)");
 	} else if (last_action == 'c') {
@@ -62,7 +66,7 @@ int main(int argc, char **argv) {
 	log_set_quiet(true);
 	FILE* logfp = fopen("LOG", "a+");
 	if (logfp) {
-		log_add_fp(logfp, 2);
+		log_add_fp(logfp, TTT_DEFAULT_LOG_LEVEL);
 		char* rp = realpath(LOG_PATH, NULL);
 		log_info("Logging to \"%s\"", rp ? rp : LOG_PATH);
 		if (rp) {
@@ -84,6 +88,7 @@ int main(int argc, char **argv) {
 
 	log_info("Init completed.  Ncurses reports terminal dimensions of %dx%d (COLSxLINES)", COLS, LINES);
 
+#define LOG_POS() log_debug("focused row: %d column: %d", focus_row, focus_column)
 	for (;;) {
 		draw();
 		switch (last_action = getch()) {
@@ -94,8 +99,27 @@ int main(int argc, char **argv) {
 		case 'r':
 			ttt_randomize_board(game);
 			break;
+		case KEY_UP:
+			focus_row = MAX(0, focus_row-1);
+			LOG_POS();
+			break;
+		case KEY_DOWN:
+			focus_row = MIN(game->rows - 1, focus_row+1);
+			LOG_POS();
+			break;
+		case KEY_RIGHT:
+			focus_column = MIN(game->columns - 1, focus_column+1);
+			LOG_POS();
+			break;
+		case KEY_LEFT:
+			focus_column = MAX(0, focus_column-1);
+			LOG_POS();
+			break;
 		case 'c':
 			ttt_reset(game);
+			break;
+		case ' ':
+			ttt_play(game, focus_row, focus_column);
 			break;
 		}
 	}
