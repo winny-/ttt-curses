@@ -25,14 +25,21 @@ void draw() {
 	char* status = ttt_state2str(game->state);
 	int mycols = COLS-strlen(status);
 	mvaddstr(0, mycols < 0 ? 0 : mycols, status);
-	
-	#define PADDING 2
-	#define SCALE 2
+
+#define MARGIN 2  // Space around the board
+#define CELL_PADDING 1 // Interior space around the cell's X/O/' '
+#define CELL_SIZE (CELL_PADDING*2 + 1)  // Size of a cell minus its border
 	for (size_t row = 0; row < game->rows; row++) {
+		if (row != 0) {
+			mvhline(MARGIN + CELL_SIZE * (row) + (row-1), MARGIN, '-', CELL_SIZE*game->rows + game->rows-1);
+		}
 		for (size_t column = 0; column < game->columns; column++) {
+			if (row == 0 && column != 0) {
+				mvvline(MARGIN, MARGIN + CELL_SIZE*column + (column-1), '|', CELL_SIZE*game->columns + game->columns-1);
+			}
 			mvaddch(
-			    row*SCALE + PADDING,
-			    column*SCALE + PADDING,
+				MARGIN + row*CELL_SIZE + row + CELL_PADDING,
+				MARGIN + column*CELL_SIZE + column + CELL_PADDING,
 			    ttt_cell2ch(ttt_get_cell(game, row, column))
 			    );
 		}
@@ -64,7 +71,7 @@ int main(int argc, char **argv) {
 	} else {
 		errx(errno, "Could not open log file");
 	}
-	
+
 	initscr();
 	start_color();
 	use_default_colors();

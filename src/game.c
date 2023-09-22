@@ -93,3 +93,18 @@ char* ttt_state2str(ttt_state st) {
 		abort();
 	}
 }
+
+bool ttt_valid_move(ttt_game* g, size_t row, size_t column) {
+	switch (g->state) {
+	case TTT_TURN_X:
+	case TTT_TURN_O:
+		break;
+	default:
+		return false;
+	}
+	if (ttt_get_cell(g, row, column) != TTT_EMPTY) {
+		return false;
+	}
+	return true;
+}
+

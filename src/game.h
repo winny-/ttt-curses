@@ -2,6 +2,7 @@
 #define _TTT_HAVE_GAME_H 1
 
 #include <stddef.h>
+#include <stdbool.h>
 
 #define TTT_DEFAULT_ROWS 3
 #define TTT_DEFAULT_COLUMNS 3
@@ -37,5 +38,7 @@ void ttt_randomize_board(ttt_game*);
 void ttt_reset(ttt_game*);
 
 char* ttt_state2str(ttt_state);
+
+bool ttt_valid_move(ttt_game*, size_t, size_t);
 
 #endif
