@@ -6,12 +6,15 @@
 #include <time.h>
 #include <string.h>
 #include <locale.h>
-#include <curses.h>
 #include <limits.h>
-#include <stdlib.h>
+#include <stdbool.h>
+
+#include <curses.h>
+#include <sqlite3.h>
 
 #include "log.h"
 #include "game.h"
+#include "highscores.h"
 
 #define MAX(x,y) (x > y ? x : y)
 #define MIN(x,y) (x < y ? x : y)
@@ -20,6 +23,7 @@
 ttt_game *game;
 int last_action;
 size_t focus_row, focus_column;
+bool highscores_enabled;
 
 void draw() {
 	clear();
@@ -80,6 +84,7 @@ int main(int argc, char **argv) {
 	start_color();
 	use_default_colors();
 	game = ttt_game_alloc(TTT_DEFAULT_ROWS, TTT_DEFAULT_COLUMNS);
+	highscores_enabled = highscores_init();
 
 	cbreak(); // Turn off line buffering.
 	noecho(); // Turn off key echoing.
@@ -93,7 +98,6 @@ int main(int argc, char **argv) {
 		draw();
 		switch (last_action = getch()) {
 		case ERR:
-			break; // Continues the main loop.
 		case 'q':
 			goto cleanup;  // Exits the main loop.
 		case 'r':
@@ -119,7 +123,20 @@ int main(int argc, char **argv) {
 			ttt_reset(game);
 			break;
 		case ' ':
+			ttt_state prevstate = game->state;
 			ttt_play(game, focus_row, focus_column);
+			if (prevstate != game->state && highscores_enabled) {
+				switch (game->state) {
+				case TTT_TIE:
+				case TTT_WIN_X:
+				case TTT_WIN_O:
+					ttt_score score = ttt_game_score(game);
+					highscores_record(game, &score);
+					break;
+				default:
+					break;
+				}
+			}
 			break;
 		}
 	}
@@ -134,5 +151,6 @@ cleanup:
 		logfp = NULL;
 	}
 	ttt_game_free(game);
+	highscores_cleanup();
 	return errors;
 }
