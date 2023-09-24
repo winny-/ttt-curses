@@ -16,6 +16,7 @@ ttt_game* ttt_game_alloc(size_t rows, size_t columns) {
 		free(g);
 		return NULL;
 	}
+	g->turn = 0;
 	g->state = TTT_TURN_X;
 	g->columns = columns;
 	g->rows = rows;
@@ -38,6 +39,16 @@ void ttt_set_cell(ttt_game* game, size_t row, size_t column, ttt_cell value) {
 	BOARD_OFFSET(row, column) = value;
 }
 
+ttt_cell ttt_str2cell(char* s) {
+	if (!strncmp(s, "X", 1)) {
+		return TTT_X;
+	} else if (!strncmp(s, "O", 1)) {
+		return TTT_O;
+	} else {
+		return TTT_EMPTY;
+	}
+}
+
 char ttt_cell2ch(ttt_cell c) {
 	switch (c) {
 	case TTT_EMPTY:
@@ -52,23 +63,6 @@ char ttt_cell2ch(ttt_cell c) {
 	}
 }
 
-void ttt_randomize_board(ttt_game* game) {
-	for (size_t row = 0; row < game->rows; row++) {
-		for (size_t column = 0; column < game->columns; column++) {
-			ttt_cell c = TTT_EMPTY;
-			switch (rand() % 3) {
-			case 0:
-				c = TTT_O;
-				break;
-			case 1:
-				c = TTT_X;
-				break;
-			}
-			ttt_set_cell(game, row, column, c);
-		}
-	}
-}
-
 void ttt_reset(ttt_game* game) {
 	for (size_t row = 0; row < game->rows; row++) {
 		for (size_t column = 0; column < game->columns; column++) {
@@ -76,6 +70,7 @@ void ttt_reset(ttt_game* game) {
 		}
 	}
 	game->state = TTT_TURN_X;
+	game->turn = 0;
 }
 
 char* ttt_state2str(ttt_state st) {
@@ -115,6 +110,7 @@ bool ttt_play(ttt_game* g, size_t row, size_t column) {
 	if (!ttt_valid_move(g, row, column)) {
 		return false;
 	}
+	g->turn++;
 	ttt_set_cell(g, row, column, g->state == TTT_TURN_X ? TTT_X : TTT_O);
 	ttt_score score = ttt_game_score(g);
 	if (score.winner) {
@@ -156,7 +152,7 @@ bool ttt_can_play(ttt_game* g) {
 
 // FIXME could this find "wins" in a sequence of TTT_EMPTY?
 ttt_score ttt_game_score(ttt_game* g) {
-	ttt_score score = { .winner = TTT_EMPTY };
+	ttt_score score = { .winner = TTT_EMPTY, .turns = g->turn };
 	// Horizontals
 	for (size_t row = 0; row < g->rows; row++) {
 		ttt_cell rcell = ttt_get_cell(g, row, 0);

@@ -10,7 +10,6 @@
 #include <stdbool.h>
 
 #include <curses.h>
-#include <sqlite3.h>
 
 #include "log.h"
 #include "game.h"
@@ -31,7 +30,13 @@ void draw() {
 	mvaddstr(0, 0, TITLE);
 	char* status = ttt_state2str(game->state);
 	int mycols = COLS-strlen(status);
-	mvaddstr(0, mycols < 0 ? 0 : mycols, status);
+	mvaddstr(0, MAX(mycols, 0), status);
+	#define TBUFSZ 200
+	char turn[TBUFSZ];
+	turn[0] = '\0';
+	snprintf(turn, TBUFSZ, "Turns: %d", game->turn);
+	mycols = COLS-strlen(turn);
+	mvaddstr(1, MAX(mycols, 0), turn);
 
 #define MARGIN 2  // Space around the board
 #define CELL_PADDING 1 // Interior space around the cell's X/O/' '
@@ -53,13 +58,36 @@ void draw() {
 	}
 	mvaddch(MARGIN + focus_row*CELL_SIZE + focus_row + CELL_PADDING, MARGIN + focus_column*CELL_SIZE + focus_column + CELL_PADDING - 1, '[');
 	mvaddch(MARGIN + focus_row*CELL_SIZE + focus_row + CELL_PADDING, MARGIN + focus_column*CELL_SIZE + focus_column + CELL_PADDING + 1, ']');
-	if (last_action == 'r') {
-		mvaddstr(LINES-2, 0, "(Randomized.)");
-	} else if (last_action == 'c') {
-		mvaddstr(LINES-2, 0, "(Cleared.)");
+	if (last_action == 'n') {
+		mvaddstr(LINES-2, 0, "(New game started.)");
 	}
-	mvaddstr(LINES-1, 0, "Press q exit.  Press r to randomize board.  Press c to clear board.");
+	mvaddstr(LINES-1, 0, "Press q exit.  Press n for a new game.  Press s to view scores.");
 	refresh();
+}
+
+void show_score() {
+	WINDOW* w = newwin(20, 60, 20, 20);
+	box(w, '|', '-');
+	mvwaddstr(w, 1, 2, "*** High scores ***");
+#define ENTRIES 5
+	if (!highscores_iter_begin(ENTRIES)) {
+		log_warn("Unable to start high scores iterator");
+		mvwaddstr(w, 4, 2, "(Unable to read high scores.)");
+		goto pressanykeytoclose;
+	}
+	for (size_t i = 0; i < ENTRIES; i++) {
+		ttt_score* score = highscores_iter_next();
+		if (!score) {
+			break;
+		}
+		mvwprintw(w, i+4, 2, "%2d %c %d,%d,%d", score->turns, ttt_cell2ch(score->winner), score->m, score->n, score->k);
+
+	}
+pressanykeytoclose:
+	mvwaddstr(w, 18, 2, "Press any key to close.");
+	wrefresh(w);
+	getch();
+	delwin(w);
 }
 
 int main(int argc, char **argv) {
@@ -100,9 +128,6 @@ int main(int argc, char **argv) {
 		case ERR:
 		case 'q':
 			goto cleanup;  // Exits the main loop.
-		case 'r':
-			ttt_randomize_board(game);
-			break;
 		case KEY_UP:
 			focus_row = MAX(0, focus_row-1);
 			LOG_POS();
@@ -119,8 +144,11 @@ int main(int argc, char **argv) {
 			focus_column = MAX(0, focus_column-1);
 			LOG_POS();
 			break;
-		case 'c':
+		case 'n':
 			ttt_reset(game);
+			break;
+		case 's':
+			show_score();
 			break;
 		case ' ':
 			ttt_state prevstate = game->state;
